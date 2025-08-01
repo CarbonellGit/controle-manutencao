@@ -67,13 +67,11 @@
             <p class="text-gray-600 mt-2">Seu painel para gerenciar o fluxo de equipamentos para conserto.</p>
         </header>
 
-        <!-- Mensagem de Configuração do Firebase -->
         <div id="config-warning" class="hidden max-w-4xl mx-auto mb-8 p-4 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-md">
             <p class="font-bold">Ação Necessária: Configurar o Firebase</p>
             <p>Parece que as credenciais do Firebase ainda não foram configuradas. Por favor, copie o objeto <strong>firebaseConfig</strong> do seu console do Firebase e cole-o no seu arquivo HTML para substituir os valores de "xxxxx".</p>
         </div>
 
-        <!-- Formulário para adicionar novo equipamento -->
         <div class="bg-white rounded-lg shadow p-6 mb-8 max-w-2xl mx-auto">
             <h2 class="text-xl font-semibold mb-4">Adicionar Novo Equipamento</h2>
             <form id="add-item-form" class="space-y-4">
@@ -81,14 +79,7 @@
                     <div>
                         <label for="equipment-type" class="block text-sm font-medium text-gray-700">Tipo de Equipamento</label>
                         <select id="equipment-type" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
-                            <option>Amplificador</option>
-                            <option>Projetor</option>
-                            <option>Notebook</option>
-                            <option>Chromebook</option>
-                            <option>Monitor</option>
-                            <option>Impressora</option>
-                            <option>Outro</option>
-                        </select>
+                            </select>
                     </div>
                     <div>
                         <label for="equipment-tag" class="block text-sm font-medium text-gray-700">Identificação</label>
@@ -105,10 +96,7 @@
                      <div>
                         <label for="sender-name" class="block text-sm font-medium text-gray-700">Responsável pelo Envio</label>
                         <select id="sender-name" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
-                            <option>Thiago Marques</option>
-                            <option>Alex Diniz</option>
-                            <option>Outro</option>
-                        </select>
+                            </select>
                     </div>
                     <div>
                         <label for="date-identified" class="block text-sm font-medium text-gray-700">Data de Identificação</label>
@@ -125,9 +113,7 @@
             </form>
         </div>
 
-        <!-- Seções Kanban -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <!-- Colunas Kanban -->
             <div class="kanban-column">
                 <h2 class="text-lg font-bold mb-4 flex items-center text-red-600"><i class="fas fa-search mr-2"></i>Identificado</h2>
                 <div id="identified-list" class="space-y-4"></div>
@@ -147,7 +133,6 @@
         </div>
     </div>
     
-    <!-- Modal de Confirmação -->
     <div id="confirmation-modal" class="modal-backdrop hidden">
         <div class="modal-content">
             <h3 class="text-lg font-bold mb-4" id="modal-title">Confirmar Ação</h3>
@@ -159,10 +144,16 @@
         </div>
     </div>
 
-    <!-- Modal de Detalhes -->
     <div id="details-modal" class="modal-backdrop hidden">
         <div id="details-modal-content" class="modal-content">
-            <!-- Conteúdo injetado pelo JS -->
+            </div>
+    </div>
+    
+    <div id="edit-modal" class="modal-backdrop hidden">
+        <div class="modal-content">
+            <h3 class="text-xl font-bold mb-4">Editar Equipamento</h3>
+            <form id="edit-item-form" class="space-y-4">
+                </form>
         </div>
     </div>
 
@@ -172,14 +163,13 @@
         import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Cole a configuração do seu projeto Firebase aqui
-        // É ESSENCIAL que você substitua os valores "xxxxx" pelas suas chaves reais do Firebase Console.
        const firebaseConfig = {
-        apiKey: "AIzaSyA2MF68rcGVi1KtZDhfkiuHqFFpnI8PILI",
-        authDomain: "controle-equipamentos-4d988.firebaseapp.com",
-        projectId: "controle-equipamentos-4d988",
-        storageBucket: "controle-equipamentos-4d988.firebasestorage.app",
-        messagingSenderId: "837758315044",
-        appId: "1:837758315044:web:fe0b453754e845518f06b1"
+            apiKey: "AIzaSyA2MF68rcGVi1KtZDhfkiuHqFFpnI8PILI",
+            authDomain: "controle-equipamentos-4d988.firebaseapp.com",
+            projectId: "controle-equipamentos-4d988",
+            storageBucket: "controle-equipamentos-4d988.appspot.com",
+            messagingSenderId: "837758315044",
+            appId: "1:837758315044:web:fe0b453754e845518f06b1"
         };
         
         // Verifica se a configuração do Firebase foi alterada
@@ -191,7 +181,6 @@
             formButton.disabled = true;
             formButton.textContent = "Configure o Firebase para continuar";
             formButton.classList.add('bg-gray-400', 'hover:bg-gray-400', 'cursor-not-allowed');
-            // Impede a execução do resto do script se a configuração não estiver presente
             throw new Error("Configuração do Firebase não encontrada. Por favor, edite o arquivo HTML.");
         }
 
@@ -211,7 +200,6 @@
             } else {
                 signInAnonymously(auth).catch(error => {
                     console.error("Login anônimo falhou:", error);
-                    // Mostra o aviso de configuração caso o erro seja de chave de API inválida
                     if (error.code === 'auth/invalid-api-key') {
                         configWarning.classList.remove('hidden');
                     }
@@ -224,7 +212,7 @@
         const lists = {
             'Identificado': document.getElementById('identified-list'),
             'Com Gestor de Infra': document.getElementById('manager-list'),
-            'Enviado para Manutenção': document.getElementById('maintenance-list'),
+            'Em Manutenção': document.getElementById('maintenance-list'),
             'Concluído': document.getElementById('completed-list'),
         };
 
@@ -237,12 +225,29 @@
 
         const detailsModal = document.getElementById('details-modal');
         const detailsModalContent = document.getElementById('details-modal-content');
+        
+        // NOVO: Centralização das opções dos selects
+        const equipmentTypes = ['Amplificador', 'Projetor', 'Notebook', 'Chromebook', 'Monitor', 'Impressora', 'Tablet', 'Outro'];
+        const senders = ['Thiago Marques', 'Alex Diniz', 'Outro'];
 
-        dateIdentifiedInput.valueAsDate = new Date();
+        // NOVO: Função para popular os selects
+        function populateSelect(selectId, options) {
+            const select = document.getElementById(selectId);
+            if(select){
+                select.innerHTML = options.map(option => `<option value="${option}">${option}</option>`).join('');
+            }
+        }
+        
+        // NOVO: Popula os selects quando o DOM estiver carregado
+        document.addEventListener('DOMContentLoaded', () => {
+            populateSelect('equipment-type', equipmentTypes);
+            populateSelect('sender-name', senders);
+            dateIdentifiedInput.valueAsDate = new Date();
+        });
 
         function formatDate(dateString) {
             if (!dateString) return 'N/A';
-            const date = new Date(dateString + 'T00:00:00');
+            const date = new Date(dateString + 'T00:00:00'); // Garante que a data seja tratada como local
             return date.toLocaleDateString('pt-BR');
         }
 
@@ -254,45 +259,56 @@
             const statusColors = {
                 'Identificado': 'border-red-500',
                 'Com Gestor de Infra': 'border-orange-500',
-                'Enviado para Manutenção': 'border-yellow-500',
+                'Em Manutenção': 'border-yellow-500',
                 'Concluído': 'border-green-500'
             };
             card.classList.add(statusColors[item.status] || 'border-gray-400');
 
-            let buttons = '';
+            let actionButtons = '';
             const deleteButton = `<button class="action-btn text-gray-400 h-8 w-8 flex items-center justify-center rounded-full hover:bg-red-100 hover:text-red-600 transition" data-action="delete" title="Remover"><i class="fas fa-trash"></i></button>`;
-
+            const editButton = `<button class="action-btn text-gray-400 h-8 w-8 flex items-center justify-center rounded-full hover:bg-blue-100 hover:text-blue-600 transition" data-action="edit" title="Editar Item"><i class="fas fa-pencil-alt"></i></button>`;
+            
+            // ATUALIZADO: Lógica dos botões de ação
             switch (item.status) {
                 case 'Identificado':
-                    buttons = `<button class="action-btn text-gray-400 h-8 w-8 flex items-center justify-center rounded-full hover:bg-orange-100 hover:text-orange-600 transition" data-action="toManager" title="Entregar ao Gestor"><i class="fas fa-user-tie"></i></button>
-                               <button class="action-btn text-gray-400 h-8 w-8 flex items-center justify-center rounded-full hover:bg-yellow-100 hover:text-yellow-600 transition" data-action="toMaintenance" title="Enviar Direto"><i class="fas fa-tools"></i></button>`;
+                    actionButtons = `<button class="action-btn text-gray-400 h-8 w-8 flex items-center justify-center rounded-full hover:bg-orange-100 hover:text-orange-600 transition" data-action="toManager" title="Entregar ao Gestor"><i class="fas fa-user-tie"></i></button>
+                                     <button class="action-btn text-gray-400 h-8 w-8 flex items-center justify-center rounded-full hover:bg-yellow-100 hover:text-yellow-600 transition" data-action="toMaintenance" title="Enviar para Manutenção"><i class="fas fa-tools"></i></button>`;
                     break;
                 case 'Com Gestor de Infra':
-                    buttons = `<button class="action-btn text-gray-400 h-8 w-8 flex items-center justify-center rounded-full hover:bg-yellow-100 hover:text-yellow-600 transition" data-action="toMaintenance" title="Confirmar Envio"><i class="fas fa-tools"></i></button>`;
+                    actionButtons = `<button class="action-btn text-gray-400 h-8 w-8 flex items-center justify-center rounded-full hover:bg-yellow-100 hover:text-yellow-600 transition" data-action="toMaintenance" title="Confirmar Envio"><i class="fas fa-tools"></i></button>`;
                     break;
-                case 'Enviado para Manutenção':
-                    buttons = `<button class="action-btn text-gray-400 h-8 w-8 flex items-center justify-center rounded-full hover:bg-green-100 hover:text-green-600 transition" data-action="toCompleted" title="Concluir"><i class="fas fa-check"></i></button>`;
+                case 'Em Manutenção':
+                    // O botão de concluir já existia aqui, não precisa de atalho.
                     break;
                 case 'Concluído':
-                     buttons = `<button class="action-btn text-gray-400 h-8 w-8 flex items-center justify-center rounded-full hover:bg-blue-100 hover:text-blue-600 transition" data-action="reopen" title="Reabrir"><i class="fas fa-undo"></i></button>`;
+                     actionButtons = `<button class="action-btn text-gray-400 h-8 w-8 flex items-center justify-center rounded-full hover:bg-blue-100 hover:text-blue-600 transition" data-action="reopen" title="Reabrir"><i class="fas fa-undo"></i></button>`;
                     break;
+            }
+
+            // NOVO: Adiciona o botão de atalho para "Concluir" em todos os estados, exceto "Concluído"
+            let completeShortcutButton = '';
+            if (item.status !== 'Concluído') {
+                completeShortcutButton = `<button class="action-btn text-gray-400 h-8 w-8 flex items-center justify-center rounded-full hover:bg-green-100 hover:text-green-600 transition" data-action="toCompleted" title="Marcar como Concluído"><i class="fas fa-check-double"></i></button>`;
             }
 
             card.innerHTML = `
                 <div class="flex justify-between items-start">
-                    <div class="flex-1 min-w-0">
+                    <div class="flex-1 min-w-0" data-action="details">
                         <h3 class="font-bold text-md leading-tight truncate" title="${item.type}">${item.type}</h3>
                         <p class="text-sm text-gray-500 truncate" title="${item.tag}">${item.tag}</p>
                         <p class="text-xs text-gray-400 truncate" title="Setor: ${item.sector}"><i class="fas fa-map-marker-alt fa-fw"></i> ${item.sector}</p>
                     </div>
                     <div class="flex-shrink-0 flex items-center gap-1 ml-2">
-                        ${buttons}
+                        ${editButton}
+                        ${actionButtons}
+                        ${completeShortcutButton}
                         ${deleteButton}
                     </div>
                 </div>
             `;
-
-            card.addEventListener('click', () => showDetails(item));
+            
+            // ATUALIZADO: Evento de clique para abrir detalhes
+            card.querySelector('[data-action="details"]').addEventListener('click', () => showDetails(item));
 
             card.querySelectorAll('.action-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
@@ -304,17 +320,23 @@
             return card;
         }
         
+        // ATUALIZADO: Lógica de `handleAction` para incluir edição
         function handleAction(action, item) {
             const actions = {
                 toManager: { title: 'Entregar ao Gestor', body: `Confirmar a entrega do item "${item.tag}" ao gestor?`, color: 'bg-orange-500', hover: 'hover:bg-orange-600', handler: () => updateItemStatus(item.id, 'Com Gestor de Infra') },
-                toMaintenance: { title: 'Enviar para Manutenção', body: `Confirmar o envio do item "${item.tag}" para manutenção?`, color: 'bg-yellow-500', hover: 'hover:bg-yellow-600', handler: () => updateItemStatus(item.id, 'Enviado para Manutenção') },
+                toMaintenance: { title: 'Enviar para Manutenção', body: `Confirmar o envio do item "${item.tag}" para manutenção?`, color: 'bg-yellow-500', hover: 'hover:bg-yellow-600', handler: () => updateItemStatus(item.id, 'Em Manutenção') },
                 toCompleted: { title: 'Marcar como Concluído', body: `Confirmar que o item "${item.tag}" retornou e está funcionando?`, color: 'bg-green-500', hover: 'hover:bg-green-600', handler: () => updateItemStatus(item.id, 'Concluído') },
                 reopen: { title: 'Reabrir Chamado', body: `Mover o item "${item.tag}" de volta para "Identificado"?`, color: 'bg-blue-500', hover: 'hover:bg-blue-600', handler: () => updateItemStatus(item.id, 'Identificado') },
-                delete: { title: 'Remover Item', body: `Tem certeza que deseja remover permanentemente o item "${item.tag}"?`, color: 'bg-red-600', hover: 'hover:bg-red-700', handler: () => deleteItem(item.id) }
+                delete: { title: 'Remover Item', body: `Tem certeza que deseja remover permanentemente o item "${item.tag}"?`, color: 'bg-red-600', hover: 'hover:bg-red-700', handler: () => deleteItem(item.id) },
+                edit: { handler: (item) => showEditModal(item) }
             };
             const selectedAction = actions[action];
             if (selectedAction) {
-                showConfirmation(selectedAction.title, selectedAction.body, selectedAction.color, selectedAction.hover, selectedAction.handler);
+                if (action === 'edit') {
+                    selectedAction.handler(item);
+                } else {
+                    showConfirmation(selectedAction.title, selectedAction.body, selectedAction.color, `hover:${selectedAction.color.replace('bg-', 'bg-')}-darker`, selectedAction.handler);
+                }
             }
         }
         
@@ -328,9 +350,10 @@
             }
             try {
                 await updateDoc(itemRef, updateData);
-            } catch (error) { console.error("Erro ao atualizar item: ", error); }
+            } catch (error) { console.error("Erro ao atualizar status do item: ", error); }
         }
-
+        
+        // ... (função loadItems permanece a mesma)
         function loadItems() {
             if (!maintenanceCollectionRef) return;
             const q = query(maintenanceCollectionRef);
@@ -341,6 +364,8 @@
                     const card = createItemCard(item);
                     if (lists[item.status]) {
                         lists[item.status].appendChild(card);
+                    } else if (item.status === 'Enviado para Manutenção') { // Fallback para compatibilidade
+                         lists['Em Manutenção'].appendChild(card);
                     }
                 });
                 Object.values(lists).forEach(list => {
@@ -350,6 +375,7 @@
                 });
             });
         }
+
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -400,6 +426,74 @@
             }
             hideConfirmation();
         });
+        
+        // --- NOVAS FUNÇÕES DE EDIÇÃO ---
+        
+        function showEditModal(item) {
+            const editModal = document.getElementById('edit-modal');
+            const editForm = document.getElementById('edit-item-form');
+            
+            editForm.innerHTML = `
+                <input type="hidden" id="edit-item-id" value="${item.id}">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="edit-equipment-type" class="block text-sm font-medium text-gray-700">Tipo</label>
+                        <select id="edit-equipment-type" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md"></select>
+                    </div>
+                    <div>
+                        <label for="edit-equipment-tag" class="block text-sm font-medium text-gray-700">Identificação</label>
+                        <input type="text" id="edit-equipment-tag" value="${item.tag}" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                    </div>
+                     <div>
+                        <label for="edit-equipment-brand-model" class="block text-sm font-medium text-gray-700">Marca / Modelo</label>
+                        <input type="text" id="edit-equipment-brand-model" value="${item.brandModel}" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                    </div>
+                    <div>
+                        <label for="edit-equipment-sector" class="block text-sm font-medium text-gray-700">Setor</label>
+                        <input type="text" id="edit-equipment-sector" value="${item.sector}" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                    </div>
+                </div>
+                <div>
+                    <label for="edit-maintenance-reason" class="block text-sm font-medium text-gray-700">Motivo</label>
+                    <textarea id="edit-maintenance-reason" rows="3" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">${item.reason}</textarea>
+                </div>
+                <div class="mt-6 flex justify-end space-x-4">
+                    <button type="button" id="edit-cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">Salvar Alterações</button>
+                </div>
+            `;
+            
+            populateSelect('edit-equipment-type', equipmentTypes);
+            document.getElementById('edit-equipment-type').value = item.type;
+            
+            editModal.classList.remove('hidden');
+
+            document.getElementById('edit-cancel-btn').addEventListener('click', () => editModal.classList.add('hidden'));
+            editForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                updateItemData();
+                editModal.classList.add('hidden');
+            });
+        }
+
+        async function updateItemData() {
+            const id = document.getElementById('edit-item-id').value;
+            const itemRef = doc(db, `artifacts/${appId}/users/${userId}/maintenance_items`, id);
+            
+            const updatedData = {
+                type: document.getElementById('edit-equipment-type').value,
+                tag: document.getElementById('edit-equipment-tag').value,
+                brandModel: document.getElementById('edit-equipment-brand-model').value,
+                sector: document.getElementById('edit-equipment-sector').value,
+                reason: document.getElementById('edit-maintenance-reason').value,
+            };
+
+            try {
+                await updateDoc(itemRef, updatedData);
+            } catch (error) { console.error("Erro ao atualizar dados do item: ", error); }
+        }
+        
+        // --- FIM DAS FUNÇÕES DE EDIÇÃO ---
 
         function showDetails(item) {
             detailsModalContent.innerHTML = `
