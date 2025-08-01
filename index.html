@@ -156,32 +156,27 @@
                 </form>
         </div>
     </div>
+    
+    <script src="firebase-config.js"></script>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // Cole a configuração do seu projeto Firebase aqui
-       const firebaseConfig = {
-            apiKey: "AIzaSyA2MF68rcGVi1KtZDhfkiuHqFFpnI8PILI",
-            authDomain: "controle-equipamentos-4d988.firebaseapp.com",
-            projectId: "controle-equipamentos-4d988",
-            storageBucket: "controle-equipamentos-4d988.appspot.com",
-            messagingSenderId: "837758315044",
-            appId: "1:837758315044:web:fe0b453754e845518f06b1"
-        };
         
-        // Verifica se a configuração do Firebase foi alterada
+        // A variável 'firebaseConfig' agora é carregada pelo 'firebase-config.js'
+        // Isso impede que as chaves fiquem expostas no repositório do GitHub.
+
         const configWarning = document.getElementById('config-warning');
         const formButton = document.getElementById('add-item-form').querySelector('button[type="submit"]');
 
-        if (firebaseConfig.apiKey === "xxxxx" || !firebaseConfig.apiKey) {
+        // A verificação agora é se a variável 'firebaseConfig' foi definida pelo script externo.
+        if (typeof firebaseConfig === 'undefined' || firebaseConfig.apiKey === "xxxxx" || !firebaseConfig.apiKey) {
             configWarning.classList.remove('hidden');
             formButton.disabled = true;
             formButton.textContent = "Configure o Firebase para continuar";
             formButton.classList.add('bg-gray-400', 'hover:bg-gray-400', 'cursor-not-allowed');
-            throw new Error("Configuração do Firebase não encontrada. Por favor, edite o arquivo HTML.");
+            throw new Error("Configuração do Firebase não encontrada. Verifique se o arquivo 'firebase-config.js' existe e está correto.");
         }
 
         const appId = firebaseConfig.projectId;
@@ -226,11 +221,9 @@
         const detailsModal = document.getElementById('details-modal');
         const detailsModalContent = document.getElementById('details-modal-content');
         
-        // NOVO: Centralização das opções dos selects
         const equipmentTypes = ['Amplificador', 'Projetor', 'Notebook', 'Chromebook', 'Monitor', 'Impressora', 'Tablet', 'Outro'];
         const senders = ['Thiago Marques', 'Alex Diniz', 'Outro'];
 
-        // NOVO: Função para popular os selects
         function populateSelect(selectId, options) {
             const select = document.getElementById(selectId);
             if(select){
@@ -238,7 +231,6 @@
             }
         }
         
-        // NOVO: Popula os selects quando o DOM estiver carregado
         document.addEventListener('DOMContentLoaded', () => {
             populateSelect('equipment-type', equipmentTypes);
             populateSelect('sender-name', senders);
@@ -247,7 +239,7 @@
 
         function formatDate(dateString) {
             if (!dateString) return 'N/A';
-            const date = new Date(dateString + 'T00:00:00'); // Garante que a data seja tratada como local
+            const date = new Date(dateString + 'T00:00:00');
             return date.toLocaleDateString('pt-BR');
         }
 
@@ -268,7 +260,6 @@
             const deleteButton = `<button class="action-btn text-gray-400 h-8 w-8 flex items-center justify-center rounded-full hover:bg-red-100 hover:text-red-600 transition" data-action="delete" title="Remover"><i class="fas fa-trash"></i></button>`;
             const editButton = `<button class="action-btn text-gray-400 h-8 w-8 flex items-center justify-center rounded-full hover:bg-blue-100 hover:text-blue-600 transition" data-action="edit" title="Editar Item"><i class="fas fa-pencil-alt"></i></button>`;
             
-            // ATUALIZADO: Lógica dos botões de ação
             switch (item.status) {
                 case 'Identificado':
                     actionButtons = `<button class="action-btn text-gray-400 h-8 w-8 flex items-center justify-center rounded-full hover:bg-orange-100 hover:text-orange-600 transition" data-action="toManager" title="Entregar ao Gestor"><i class="fas fa-user-tie"></i></button>
@@ -278,14 +269,12 @@
                     actionButtons = `<button class="action-btn text-gray-400 h-8 w-8 flex items-center justify-center rounded-full hover:bg-yellow-100 hover:text-yellow-600 transition" data-action="toMaintenance" title="Confirmar Envio"><i class="fas fa-tools"></i></button>`;
                     break;
                 case 'Em Manutenção':
-                    // O botão de concluir já existia aqui, não precisa de atalho.
                     break;
                 case 'Concluído':
                      actionButtons = `<button class="action-btn text-gray-400 h-8 w-8 flex items-center justify-center rounded-full hover:bg-blue-100 hover:text-blue-600 transition" data-action="reopen" title="Reabrir"><i class="fas fa-undo"></i></button>`;
                     break;
             }
 
-            // NOVO: Adiciona o botão de atalho para "Concluir" em todos os estados, exceto "Concluído"
             let completeShortcutButton = '';
             if (item.status !== 'Concluído') {
                 completeShortcutButton = `<button class="action-btn text-gray-400 h-8 w-8 flex items-center justify-center rounded-full hover:bg-green-100 hover:text-green-600 transition" data-action="toCompleted" title="Marcar como Concluído"><i class="fas fa-check-double"></i></button>`;
@@ -307,7 +296,6 @@
                 </div>
             `;
             
-            // ATUALIZADO: Evento de clique para abrir detalhes
             card.querySelector('[data-action="details"]').addEventListener('click', () => showDetails(item));
 
             card.querySelectorAll('.action-btn').forEach(btn => {
@@ -320,7 +308,6 @@
             return card;
         }
         
-        // ATUALIZADO: Lógica de `handleAction` para incluir edição
         function handleAction(action, item) {
             const actions = {
                 toManager: { title: 'Entregar ao Gestor', body: `Confirmar a entrega do item "${item.tag}" ao gestor?`, color: 'bg-orange-500', hover: 'hover:bg-orange-600', handler: () => updateItemStatus(item.id, 'Com Gestor de Infra') },
@@ -353,7 +340,6 @@
             } catch (error) { console.error("Erro ao atualizar status do item: ", error); }
         }
         
-        // ... (função loadItems permanece a mesma)
         function loadItems() {
             if (!maintenanceCollectionRef) return;
             const q = query(maintenanceCollectionRef);
@@ -364,7 +350,7 @@
                     const card = createItemCard(item);
                     if (lists[item.status]) {
                         lists[item.status].appendChild(card);
-                    } else if (item.status === 'Enviado para Manutenção') { // Fallback para compatibilidade
+                    } else if (item.status === 'Enviado para Manutenção') {
                          lists['Em Manutenção'].appendChild(card);
                     }
                 });
@@ -375,7 +361,6 @@
                 });
             });
         }
-
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -426,8 +411,6 @@
             }
             hideConfirmation();
         });
-        
-        // --- NOVAS FUNÇÕES DE EDIÇÃO ---
         
         function showEditModal(item) {
             const editModal = document.getElementById('edit-modal');
@@ -493,8 +476,6 @@
             } catch (error) { console.error("Erro ao atualizar dados do item: ", error); }
         }
         
-        // --- FIM DAS FUNÇÕES DE EDIÇÃO ---
-
         function showDetails(item) {
             detailsModalContent.innerHTML = `
                 <div class="flex justify-between items-center mb-4">
