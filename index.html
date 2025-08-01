@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Manutenção de Equipamentos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .kanban-column {
+            background-color: #f3f4f6; /* gray-100 */
+            border-radius: 0.75rem;
+            padding: 1rem;
+        }
+        .kanban-column .space-y-4 > * + * {
+            margin-top: 1rem;
+        }
+        .card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+        }
+        .card:hover {
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            transform: translateY(-3px);
+            border-color: #4f46e5; /* indigo-600 */
+        }
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+            -webkit-backdrop-filter: blur(2px);
+            backdrop-filter: blur(2px);
+        }
+        .modal-content {
+            background-color: white;
+            padding: 1.5rem 2rem;
+            border-radius: 0.5rem;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+        }
+        .action-btn {
+            z-index: 10;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <div id="app" class="container mx-auto p-4 md:p-8 max-w-screen-2xl">
+        
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Controle de Manutenção de Equipamentos</h1>
+            <p class="text-gray-600 mt-2">Seu painel para gerenciar o fluxo de equipamentos para conserto.</p>
+        </header>
+
+        <!-- Mensagem de Configuração do Firebase -->
+        <div id="config-warning" class="hidden max-w-4xl mx-auto mb-8 p-4 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-md">
+            <p class="font-bold">Ação Necessária: Configurar o Firebase</p>
+            <p>Parece que as credenciais do Firebase ainda não foram configuradas. Por favor, copie o objeto <strong>firebaseConfig</strong> do seu console do Firebase e cole-o no seu arquivo HTML para substituir os valores de "xxxxx".</p>
+        </div>
+
+        <!-- Formulário para adicionar novo equipamento -->
+        <div class="bg-white rounded-lg shadow p-6 mb-8 max-w-2xl mx-auto">
+            <h2 class="text-xl font-semibold mb-4">Adicionar Novo Equipamento</h2>
+            <form id="add-item-form" class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="equipment-type" class="block text-sm font-medium text-gray-700">Tipo de Equipamento</label>
+                        <select id="equipment-type" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                            <option>Amplificador</option>
+                            <option>Projetor</option>
+                            <option>Notebook</option>
+                            <option>Chromebook</option>
+                            <option>Monitor</option>
+                            <option>Impressora</option>
+                            <option>Outro</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="equipment-tag" class="block text-sm font-medium text-gray-700">Identificação</label>
+                        <input type="text" id="equipment-tag" required placeholder="Ex: NTB-01-SALA05" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="equipment-brand-model" class="block text-sm font-medium text-gray-700">Marca / Modelo</label>
+                        <input type="text" id="equipment-brand-model" required placeholder="Ex: Dell Vostro, Epson S41+" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="equipment-sector" class="block text-sm font-medium text-gray-700">Setor / Sala</label>
+                        <input type="text" id="equipment-sector" required placeholder="Ex: Sala 10, Biblioteca" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                     <div>
+                        <label for="sender-name" class="block text-sm font-medium text-gray-700">Responsável pelo Envio</label>
+                        <select id="sender-name" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                            <option>Thiago Marques</option>
+                            <option>Alex Diniz</option>
+                            <option>Outro</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="date-identified" class="block text-sm font-medium text-gray-700">Data de Identificação</label>
+                        <input type="date" id="date-identified" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                </div>
+                <div>
+                    <label for="maintenance-reason" class="block text-sm font-medium text-gray-700">Motivo da Manutenção</label>
+                    <textarea id="maintenance-reason" rows="3" required placeholder="Ex: Não liga, tela quebrada, etc." class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                </div>
+                <button type="submit" class="w-full bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition">
+                    <i class="fas fa-plus mr-2"></i>Adicionar à Lista
+                </button>
+            </form>
+        </div>
+
+        <!-- Seções Kanban -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- Colunas Kanban -->
+            <div class="kanban-column">
+                <h2 class="text-lg font-bold mb-4 flex items-center text-red-600"><i class="fas fa-search mr-2"></i>Identificado</h2>
+                <div id="identified-list" class="space-y-4"></div>
+            </div>
+            <div class="kanban-column">
+                <h2 class="text-lg font-bold mb-4 flex items-center text-orange-500"><i class="fas fa-user-tie mr-2"></i>Com Gestor de Infra</h2>
+                <div id="manager-list" class="space-y-4"></div>
+            </div>
+            <div class="kanban-column">
+                <h2 class="text-lg font-bold mb-4 flex items-center text-yellow-500"><i class="fas fa-tools mr-2"></i>Em Manutenção</h2>
+                <div id="maintenance-list" class="space-y-4"></div>
+            </div>
+            <div class="kanban-column">
+                <h2 class="text-lg font-bold mb-4 flex items-center text-green-500"><i class="fas fa-check-circle mr-2"></i>Concluído</h2>
+                <div id="completed-list" class="space-y-4"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Confirmação -->
+    <div id="confirmation-modal" class="modal-backdrop hidden">
+        <div class="modal-content">
+            <h3 class="text-lg font-bold mb-4" id="modal-title">Confirmar Ação</h3>
+            <p id="modal-body">Você tem certeza que deseja realizar esta ação?</p>
+            <div class="mt-6 flex justify-end space-x-4">
+                <button id="modal-cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Cancelar</button>
+                <button id="modal-confirm-btn" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Detalhes -->
+    <div id="details-modal" class="modal-backdrop hidden">
+        <div id="details-modal-content" class="modal-content">
+            <!-- Conteúdo injetado pelo JS -->
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Cole a configuração do seu projeto Firebase aqui
+        // É ESSENCIAL que você substitua os valores "xxxxx" pelas suas chaves reais do Firebase Console.
+       const firebaseConfig = {
+        apiKey: "AIzaSyA2MF68rcGVi1KtZDhfkiuHqFFpnI8PILI",
+        authDomain: "controle-equipamentos-4d988.firebaseapp.com",
+        projectId: "controle-equipamentos-4d988",
+        storageBucket: "controle-equipamentos-4d988.firebasestorage.app",
+        messagingSenderId: "837758315044",
+        appId: "1:837758315044:web:fe0b453754e845518f06b1"
+        };
+        
+        // Verifica se a configuração do Firebase foi alterada
+        const configWarning = document.getElementById('config-warning');
+        const formButton = document.getElementById('add-item-form').querySelector('button[type="submit"]');
+
+        if (firebaseConfig.apiKey === "xxxxx" || !firebaseConfig.apiKey) {
+            configWarning.classList.remove('hidden');
+            formButton.disabled = true;
+            formButton.textContent = "Configure o Firebase para continuar";
+            formButton.classList.add('bg-gray-400', 'hover:bg-gray-400', 'cursor-not-allowed');
+            // Impede a execução do resto do script se a configuração não estiver presente
+            throw new Error("Configuração do Firebase não encontrada. Por favor, edite o arquivo HTML.");
+        }
+
+        const appId = firebaseConfig.projectId;
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let userId = null;
+        let maintenanceCollectionRef = null;
+
+        onAuthStateChanged(auth, user => {
+            if (user) {
+                userId = user.uid;
+                maintenanceCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/maintenance_items`);
+                loadItems();
+            } else {
+                signInAnonymously(auth).catch(error => {
+                    console.error("Login anônimo falhou:", error);
+                    // Mostra o aviso de configuração caso o erro seja de chave de API inválida
+                    if (error.code === 'auth/invalid-api-key') {
+                        configWarning.classList.remove('hidden');
+                    }
+                });
+            }
+        });
+
+        const form = document.getElementById('add-item-form');
+        const dateIdentifiedInput = document.getElementById('date-identified');
+        const lists = {
+            'Identificado': document.getElementById('identified-list'),
+            'Com Gestor de Infra': document.getElementById('manager-list'),
+            'Enviado para Manutenção': document.getElementById('maintenance-list'),
+            'Concluído': document.getElementById('completed-list'),
+        };
+
+        const confirmationModal = document.getElementById('confirmation-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalBody = document.getElementById('modal-body');
+        const modalCancelBtn = document.getElementById('modal-cancel-btn');
+        const modalConfirmBtn = document.getElementById('modal-confirm-btn');
+        let currentConfirmAction = null;
+
+        const detailsModal = document.getElementById('details-modal');
+        const detailsModalContent = document.getElementById('details-modal-content');
+
+        dateIdentifiedInput.valueAsDate = new Date();
+
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString + 'T00:00:00');
+            return date.toLocaleDateString('pt-BR');
+        }
+
+        function createItemCard(item) {
+            const card = document.createElement('div');
+            card.className = 'card p-3 border-l-4';
+            card.setAttribute('data-id', item.id);
+            
+            const statusColors = {
+                'Identificado': 'border-red-500',
+                'Com Gestor de Infra': 'border-orange-500',
+                'Enviado para Manutenção': 'border-yellow-500',
+                'Concluído': 'border-green-500'
+            };
+            card.classList.add(statusColors[item.status] || 'border-gray-400');
+
+            let buttons = '';
+            const deleteButton = `<button class="action-btn text-gray-400 h-8 w-8 flex items-center justify-center rounded-full hover:bg-red-100 hover:text-red-600 transition" data-action="delete" title="Remover"><i class="fas fa-trash"></i></button>`;
+
+            switch (item.status) {
+                case 'Identificado':
+                    buttons = `<button class="action-btn text-gray-400 h-8 w-8 flex items-center justify-center rounded-full hover:bg-orange-100 hover:text-orange-600 transition" data-action="toManager" title="Entregar ao Gestor"><i class="fas fa-user-tie"></i></button>
+                               <button class="action-btn text-gray-400 h-8 w-8 flex items-center justify-center rounded-full hover:bg-yellow-100 hover:text-yellow-600 transition" data-action="toMaintenance" title="Enviar Direto"><i class="fas fa-tools"></i></button>`;
+                    break;
+                case 'Com Gestor de Infra':
+                    buttons = `<button class="action-btn text-gray-400 h-8 w-8 flex items-center justify-center rounded-full hover:bg-yellow-100 hover:text-yellow-600 transition" data-action="toMaintenance" title="Confirmar Envio"><i class="fas fa-tools"></i></button>`;
+                    break;
+                case 'Enviado para Manutenção':
+                    buttons = `<button class="action-btn text-gray-400 h-8 w-8 flex items-center justify-center rounded-full hover:bg-green-100 hover:text-green-600 transition" data-action="toCompleted" title="Concluir"><i class="fas fa-check"></i></button>`;
+                    break;
+                case 'Concluído':
+                     buttons = `<button class="action-btn text-gray-400 h-8 w-8 flex items-center justify-center rounded-full hover:bg-blue-100 hover:text-blue-600 transition" data-action="reopen" title="Reabrir"><i class="fas fa-undo"></i></button>`;
+                    break;
+            }
+
+            card.innerHTML = `
+                <div class="flex justify-between items-start">
+                    <div class="flex-1 min-w-0">
+                        <h3 class="font-bold text-md leading-tight truncate" title="${item.type}">${item.type}</h3>
+                        <p class="text-sm text-gray-500 truncate" title="${item.tag}">${item.tag}</p>
+                        <p class="text-xs text-gray-400 truncate" title="Setor: ${item.sector}"><i class="fas fa-map-marker-alt fa-fw"></i> ${item.sector}</p>
+                    </div>
+                    <div class="flex-shrink-0 flex items-center gap-1 ml-2">
+                        ${buttons}
+                        ${deleteButton}
+                    </div>
+                </div>
+            `;
+
+            card.addEventListener('click', () => showDetails(item));
+
+            card.querySelectorAll('.action-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    handleAction(btn.dataset.action, item);
+                });
+            });
+
+            return card;
+        }
+        
+        function handleAction(action, item) {
+            const actions = {
+                toManager: { title: 'Entregar ao Gestor', body: `Confirmar a entrega do item "${item.tag}" ao gestor?`, color: 'bg-orange-500', hover: 'hover:bg-orange-600', handler: () => updateItemStatus(item.id, 'Com Gestor de Infra') },
+                toMaintenance: { title: 'Enviar para Manutenção', body: `Confirmar o envio do item "${item.tag}" para manutenção?`, color: 'bg-yellow-500', hover: 'hover:bg-yellow-600', handler: () => updateItemStatus(item.id, 'Enviado para Manutenção') },
+                toCompleted: { title: 'Marcar como Concluído', body: `Confirmar que o item "${item.tag}" retornou e está funcionando?`, color: 'bg-green-500', hover: 'hover:bg-green-600', handler: () => updateItemStatus(item.id, 'Concluído') },
+                reopen: { title: 'Reabrir Chamado', body: `Mover o item "${item.tag}" de volta para "Identificado"?`, color: 'bg-blue-500', hover: 'hover:bg-blue-600', handler: () => updateItemStatus(item.id, 'Identificado') },
+                delete: { title: 'Remover Item', body: `Tem certeza que deseja remover permanentemente o item "${item.tag}"?`, color: 'bg-red-600', hover: 'hover:bg-red-700', handler: () => deleteItem(item.id) }
+            };
+            const selectedAction = actions[action];
+            if (selectedAction) {
+                showConfirmation(selectedAction.title, selectedAction.body, selectedAction.color, selectedAction.hover, selectedAction.handler);
+            }
+        }
+        
+        async function updateItemStatus(id, newStatus) {
+            const itemRef = doc(db, `artifacts/${appId}/users/${userId}/maintenance_items`, id);
+            const updateData = { status: newStatus };
+            if (newStatus === 'Concluído') {
+                updateData.dateCompleted = new Date().toISOString().split('T')[0];
+            } else if (newStatus === 'Identificado') {
+                updateData.dateCompleted = null;
+            }
+            try {
+                await updateDoc(itemRef, updateData);
+            } catch (error) { console.error("Erro ao atualizar item: ", error); }
+        }
+
+        function loadItems() {
+            if (!maintenanceCollectionRef) return;
+            const q = query(maintenanceCollectionRef);
+            onSnapshot(q, (snapshot) => {
+                Object.values(lists).forEach(list => list.innerHTML = '');
+                snapshot.docs.forEach(doc => {
+                    const item = { id: doc.id, ...doc.data() };
+                    const card = createItemCard(item);
+                    if (lists[item.status]) {
+                        lists[item.status].appendChild(card);
+                    }
+                });
+                Object.values(lists).forEach(list => {
+                    if(list.children.length === 0) {
+                         list.innerHTML = '<p class="text-center text-sm text-gray-500 p-4">Nenhum item aqui.</p>';
+                    }
+                });
+            });
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!maintenanceCollectionRef) return;
+            const newItem = {
+                type: document.getElementById('equipment-type').value,
+                tag: document.getElementById('equipment-tag').value,
+                brandModel: document.getElementById('equipment-brand-model').value,
+                sector: document.getElementById('equipment-sector').value,
+                reason: document.getElementById('maintenance-reason').value,
+                sender: document.getElementById('sender-name').value,
+                dateIdentified: document.getElementById('date-identified').value,
+                status: 'Identificado',
+                dateCompleted: null,
+            };
+            try {
+                await addDoc(maintenanceCollectionRef, newItem);
+                form.reset();
+                dateIdentifiedInput.valueAsDate = new Date();
+            } catch (error) { console.error("Erro ao adicionar item: ", error); }
+        });
+
+        async function deleteItem(id) {
+            const itemRef = doc(db, `artifacts/${appId}/users/${userId}/maintenance_items`, id);
+            try {
+                await deleteDoc(itemRef);
+                hideDetails();
+            } catch (error) { console.error("Erro ao deletar item: ", error); }
+        }
+
+        function showConfirmation(title, body, confirmBtnColor, confirmBtnHover, onConfirm) {
+            modalTitle.textContent = title;
+            modalBody.textContent = body;
+            modalConfirmBtn.className = `px-4 py-2 text-white rounded-md ${confirmBtnColor} ${confirmBtnHover}`;
+            confirmationModal.classList.remove('hidden');
+            currentConfirmAction = onConfirm;
+        }
+
+        function hideConfirmation() {
+            confirmationModal.classList.add('hidden');
+            currentConfirmAction = null;
+        }
+
+        modalCancelBtn.addEventListener('click', hideConfirmation);
+        modalConfirmBtn.addEventListener('click', () => {
+            if (currentConfirmAction) {
+                currentConfirmAction();
+            }
+            hideConfirmation();
+        });
+
+        function showDetails(item) {
+            detailsModalContent.innerHTML = `
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold">${item.type}</h3>
+                    <button id="close-details-btn" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+                </div>
+                <div class="space-y-3 text-sm">
+                    <p><strong>Identificação:</strong> ${item.tag}</p>
+                    <p><strong>Marca/Modelo:</strong> ${item.brandModel || 'Não informado'}</p>
+                    <p><strong>Setor/Sala:</strong> ${item.sector}</p>
+                    <p><strong>Responsável:</strong> ${item.sender}</p>
+                    <p><strong>Data de Identificação:</strong> ${formatDate(item.dateIdentified)}</p>
+                    ${item.dateCompleted ? `<p><strong>Data de Conclusão:</strong> ${formatDate(item.dateCompleted)}</p>` : ''}
+                    <div class="border-t pt-3 mt-3">
+                        <p class="font-semibold">Motivo da Manutenção:</p>
+                        <p class="text-gray-600 whitespace-pre-wrap">${item.reason}</p>
+                    </div>
+                </div>
+            `;
+            detailsModal.classList.remove('hidden');
+            
+            document.getElementById('close-details-btn').addEventListener('click', hideDetails);
+        }
+
+        function hideDetails() {
+            detailsModal.classList.add('hidden');
+        }
+
+        detailsModal.addEventListener('click', (e) => {
+            if (e.target === detailsModal) {
+                hideDetails();
+            }
+        });
+
+    </script>
+</body>
+</html>
