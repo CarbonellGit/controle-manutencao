@@ -131,7 +131,7 @@
     </div>
 
     <!-- Modal de Edição -->
-    <div id="edit-modal" class="modal-overlay fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden z-50">
+    <div id="edit-modal" class="modal-overlay fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden opacity-0 z-50">
         <div class="modal-container bg-white rounded-lg shadow-xl w-full max-w-3xl transform -translate-y-10">
             <div class="p-6">
                 <div class="flex justify-between items-center border-b pb-3 mb-4">
@@ -187,14 +187,14 @@
     <script type="module">
         // Importa as funções necessárias do Firebase SDK
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, updateDoc, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, doc, deleteDoc, updateDoc, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
         // Configuração do seu web app do Firebase
         const firebaseConfig = {
           apiKey: "AIzaSyBb7Yn5quC4oyDyubiRMA2yKi-gs3Sp34w",
           authDomain: "controle-manutencao-9ff28.firebaseapp.com",
           projectId: "controle-manutencao-9ff28",
-          storageBucket: "controle-manutencao-9ff28.appspot.com", // Corrigido para .appspot.com
+          storageBucket: "controle-manutencao-9ff28.appspot.com",
           messagingSenderId: "769520715554",
           appId: "1:769520715554:web:9177bda350b616f680077b"
         };
@@ -229,43 +229,27 @@
             const getAcoesHtml = (equipamento) => {
                 const statusIndex = STATUS_ORDER.indexOf(equipamento.status);
                 let actions = '';
-
-                // Botão de Voltar
-                if (statusIndex > 0) {
-                    actions += `<button data-id="${equipamento.id}" data-action="back" class="btn-acao text-gray-500 hover:text-gray-700 p-1 rounded-full transition" title="Voltar Etapa">&larr;</button>`;
-                }
-
-                // Botão de Avançar
-                if (statusIndex < STATUS_ORDER.length - 1) {
-                    actions += `<button data-id="${equipamento.id}" data-action="forward" class="btn-acao text-gray-500 hover:text-gray-700 p-1 rounded-full transition" title="Avançar Etapa">&rarr;</button>`;
-                }
-
-                // Botão de Editar
+                if (statusIndex > 0) actions += `<button data-id="${equipamento.id}" data-action="back" class="btn-acao text-gray-500 hover:text-gray-700 p-1 rounded-full transition" title="Voltar Etapa">&larr;</button>`;
+                if (statusIndex < STATUS_ORDER.length - 1) actions += `<button data-id="${equipamento.id}" data-action="forward" class="btn-acao text-gray-500 hover:text-gray-700 p-1 rounded-full transition" title="Avançar Etapa">&rarr;</button>`;
                 actions += `<button data-id="${equipamento.id}" data-action="edit" class="btn-edit text-indigo-600 hover:text-indigo-900 ml-4" title="Editar">Editar</button>`;
-                // Botão de Excluir
                 actions += `<button data-id="${equipamento.id}" data-action="delete" class="btn-excluir text-red-600 hover:text-red-900 ml-2" title="Excluir">Excluir</button>`;
-
                 return `<div class="flex items-center justify-center">${actions}</div>`;
             };
 
-            // Função para renderizar a tabela com dados do Firestore em tempo real
+            // Função para renderizar a tabela
             const renderizarTabela = (equipamentos) => {
                 listaEquipamentos.innerHTML = ''; 
                 mensagemVazia.classList.toggle('hidden', equipamentos.length > 0);
-                loader.classList.add('hidden'); // Esconde o loader
+                loader.classList.add('hidden');
 
                 equipamentos.forEach(equipamento => {
                     const statusInfo = STATUS_MAP[equipamento.status];
-                    // Fallback caso o status seja inválido
-                    if (!statusInfo) {
-                        console.warn(`Status inválido encontrado para o equipamento ${equipamento.id}: ${equipamento.status}`);
-                        return;
-                    }
+                    if (!statusInfo) return; // Ignora itens com status inválido
                     const dataFormatada = new Date(equipamento.data + 'T00:00:00').toLocaleDateString('pt-BR');
                     
                     const tr = document.createElement('tr');
                     tr.classList.add('fade-in');
-                    tr.dataset.id = equipamento.id; // Adiciona o ID do documento ao elemento TR
+                    tr.dataset.id = equipamento.id;
                     tr.innerHTML = `
                         <td class="px-6 py-4">
                             <div class="text-sm font-medium text-gray-900">${equipamento.tipo} - ${equipamento.marcaModelo}</div>
@@ -276,34 +260,31 @@
                                 ${statusInfo.text}
                             </span>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            ${getAcoesHtml(equipamento)}
-                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">${getAcoesHtml(equipamento)}</td>
                     `;
                     listaEquipamentos.appendChild(tr);
                 });
             };
             
-            // Listener em tempo real para a coleção de equipamentos
+            // Listener em tempo real do Firestore
             const q = query(equipamentosCollection, orderBy("createdAt", "desc"));
             onSnapshot(q, (querySnapshot) => {
                 const equipamentos = [];
-                querySnapshot.forEach((doc) => {
-                    equipamentos.push({ id: doc.id, ...doc.data() });
-                });
-                equipamentosCache = equipamentos; // Atualiza o cache
+                querySnapshot.forEach((doc) => equipamentos.push({ id: doc.id, ...doc.data() }));
+                equipamentosCache = equipamentos;
                 renderizarTabela(equipamentos);
             }, (error) => {
-                console.error("Erro ao buscar dados em tempo real: ", error);
+                console.error("Erro ao buscar dados: ", error);
                 alert("Não foi possível carregar os dados. Verifique sua conexão e as regras do Firestore.");
                 loader.classList.add('hidden');
             });
 
-
-            // Função para abrir o modal de edição
+            // --- LÓGICA DO MODAL (CORRIGIDA) ---
             const openEditModal = (equipamento) => {
-                if (!equipamento) return;
-
+                if (!equipamento || !equipamento.id) {
+                    alert("Não foi possível carregar os dados para edição. Tente novamente.");
+                    return;
+                }
                 editForm['edit-id'].value = equipamento.id;
                 editForm['edit-tipo'].value = equipamento.tipo;
                 editForm['edit-marcaModelo'].value = equipamento.marcaModelo;
@@ -314,15 +295,14 @@
 
                 editModal.classList.remove('hidden');
                 setTimeout(() => {
-                    editModal.querySelector('.modal-overlay').classList.remove('opacity-0');
-                    editModal.querySelector('.modal-container').classList.remove('-translate-y-10', 'opacity-0');
+                    editModal.classList.remove('opacity-0');
+                    editModal.querySelector('.modal-container').classList.remove('-translate-y-10');
                 }, 10);
             };
 
-            // Função para fechar o modal de edição
             const closeEditModal = () => {
-                editModal.querySelector('.modal-overlay').classList.add('opacity-0');
-                editModal.querySelector('.modal-container').classList.add('-translate-y-10', 'opacity-0');
+                editModal.classList.add('opacity-0');
+                editModal.querySelector('.modal-container').classList.add('-translate-y-10');
                 setTimeout(() => editModal.classList.add('hidden'), 300);
             };
 
@@ -337,21 +317,19 @@
                     motivo: form.motivo.value.trim(),
                     data: form.data.value,
                     status: 'Aguardando Envio',
-                    createdAt: new Date() // Campo para ordenação
+                    createdAt: new Date()
                 };
-                
                 try {
                     await addDoc(equipamentosCollection, novoEquipamento);
                     form.reset();
                     document.getElementById('data').valueAsDate = new Date();
-                    form.tipo.focus();
                 } catch (error) {
                     console.error("Erro ao adicionar equipamento: ", error);
-                    alert("Ocorreu um erro ao salvar. Tente novamente.");
+                    alert("Ocorreu um erro ao salvar.");
                 }
             });
 
-            // Eventos na lista de equipamentos (delegação de eventos)
+            // Eventos na lista de equipamentos
             listaEquipamentos.addEventListener('click', async (e) => {
                 const button = e.target.closest('button[data-id]');
                 if (!button) return;
@@ -359,22 +337,14 @@
                 const id = button.dataset.id;
                 const action = button.dataset.action;
                 const docRef = doc(db, "equipamentos", id);
-
                 const equipamentoClicado = equipamentosCache.find(eq => eq.id === id);
-                if (!equipamentoClicado) {
-                    console.error("Equipamento não encontrado no cache.");
-                    return;
-                }
+
+                if (!equipamentoClicado) return;
 
                 switch (action) {
                     case 'delete':
-                        if (confirm('Tem certeza que deseja excluir este item?')) {
-                            try {
-                                await deleteDoc(docRef);
-                            } catch (error) {
-                                console.error("Erro ao excluir: ", error);
-                                alert("Erro ao excluir. Tente novamente.");
-                            }
+                        if (confirm('Tem certeza que deseja excluir?')) {
+                            await deleteDoc(docRef).catch(err => alert("Erro ao excluir."));
                         }
                         break;
                     case 'edit':
@@ -384,25 +354,22 @@
                     case 'back':
                         const currentStatusIndex = STATUS_ORDER.indexOf(equipamentoClicado.status);
                         const newIndex = action === 'forward' ? currentStatusIndex + 1 : currentStatusIndex - 1;
-                        
                         if (newIndex >= 0 && newIndex < STATUS_ORDER.length) {
-                            try {
-                                await updateDoc(docRef, { status: STATUS_ORDER[newIndex] });
-                            } catch(error) {
-                                console.error("Erro ao atualizar status: ", error);
-                                alert("Erro ao atualizar status. Tente novamente.");
-                            }
+                            await updateDoc(docRef, { status: STATUS_ORDER[newIndex] }).catch(err => alert("Erro ao atualizar status."));
                         }
                         break;
                 }
             });
 
-            // Evento de submit do formulário de edição
+            // Evento de submit do formulário de edição (CORRIGIDO)
             editForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const id = editForm['edit-id'].value;
+                if (!id) {
+                    alert("Erro: ID do equipamento não encontrado.");
+                    return;
+                }
                 const docRef = doc(db, "equipamentos", id);
-
                 const dadosAtualizados = {
                     tipo: editForm['edit-tipo'].value,
                     marcaModelo: editForm['edit-marcaModelo'].value.trim(),
@@ -411,27 +378,26 @@
                     motivo: editForm['edit-motivo'].value.trim(),
                     data: editForm['edit-data'].value,
                 };
-
                 try {
                     await updateDoc(docRef, dadosAtualizados);
-                    closeEditModal();
+                    closeEditModal(); // Fecha o modal em caso de sucesso
                 } catch (error) {
                     console.error("Erro ao atualizar equipamento: ", error);
                     alert("Erro ao salvar alterações. Tente novamente.");
                 }
             });
 
-            // Eventos do Modal
+            // Eventos do Modal (CORRIGIDO)
             closeModalBtn.addEventListener('click', closeEditModal);
             editModal.addEventListener('click', (e) => {
-                if (e.target.classList.contains('modal-overlay')) {
+                if (e.target === editModal) { // Fecha se clicar no fundo escuro
                     closeEditModal();
                 }
             });
             
             // Inicialização
             document.getElementById('data').valueAsDate = new Date();
-            loader.classList.remove('hidden'); // Mostra o loader ao carregar a página
+            loader.classList.remove('hidden');
         });
     </script>
 </body>
