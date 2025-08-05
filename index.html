@@ -214,6 +214,8 @@
             const closeModalBtn = document.getElementById('close-modal-btn');
             const loader = document.getElementById('loader');
             
+            let equipamentosCache = []; // Cache para os dados atuais, evita releituras
+
             // Constantes de Status
             const STATUS_MAP = {
                 'Aguardando Envio': { text: 'Aguardando Envio', color: 'bg-gray-100 text-gray-800' },
@@ -254,6 +256,11 @@
 
                 equipamentos.forEach(equipamento => {
                     const statusInfo = STATUS_MAP[equipamento.status];
+                    // Fallback caso o status seja inválido
+                    if (!statusInfo) {
+                        console.warn(`Status inválido encontrado para o equipamento ${equipamento.id}: ${equipamento.status}`);
+                        return;
+                    }
                     const dataFormatada = new Date(equipamento.data + 'T00:00:00').toLocaleDateString('pt-BR');
                     
                     const tr = document.createElement('tr');
@@ -284,7 +291,12 @@
                 querySnapshot.forEach((doc) => {
                     equipamentos.push({ id: doc.id, ...doc.data() });
                 });
+                equipamentosCache = equipamentos; // Atualiza o cache
                 renderizarTabela(equipamentos);
+            }, (error) => {
+                console.error("Erro ao buscar dados em tempo real: ", error);
+                alert("Não foi possível carregar os dados. Verifique sua conexão e as regras do Firestore.");
+                loader.classList.add('hidden');
             });
 
 
@@ -348,12 +360,11 @@
                 const action = button.dataset.action;
                 const docRef = doc(db, "equipamentos", id);
 
-                // Encontra os dados do equipamento clicado
-                const tr = button.closest('tr');
-                const equipamentoParaAcao = {
-                    id: id,
-                    status: STATUS_ORDER.find(status => tr.querySelector(`.${STATUS_MAP[status].color}`))
-                };
+                const equipamentoClicado = equipamentosCache.find(eq => eq.id === id);
+                if (!equipamentoClicado) {
+                    console.error("Equipamento não encontrado no cache.");
+                    return;
+                }
 
                 switch (action) {
                     case 'delete':
@@ -367,36 +378,11 @@
                         }
                         break;
                     case 'edit':
-                        // Para editar, buscamos os dados completos do TR para evitar uma nova leitura do DB
-                        const tipoMarca = tr.querySelector('.text-gray-900').textContent.split(' - ');
-                        const detalhes = tr.querySelector('.text-gray-500').title.split(' | ');
-                        const nserieRaw = tr.querySelector('.text-gray-500').textContent.split(' • ')[0];
-                        
-                        const equipamentoParaEditar = {
-                            id: id,
-                            tipo: tipoMarca[0],
-                            marcaModelo: tipoMarca[1],
-                            nserie: nserieRaw.startsWith('S/N: ') ? nserieRaw.replace('S/N: ', '') : '',
-                            local: detalhes[0],
-                            motivo: detalhes[1],
-                            data: document.getElementById(`edit-data-${id}`)?.value || new Date().toISOString().split('T')[0] // Fallback
-                        };
-                        
-                        // Uma forma de pegar a data é mais complexa, vamos simplificar
-                        // e abrir o modal com os dados que temos, mas o ideal seria pegar do snapshot
-                        // A melhor prática é ter todos os dados já disponíveis no JS.
-                        // O onSnapshot já nos dá isso, então vamos buscar no array.
-                        const q = query(equipamentosCollection);
-                        const querySnapshot = await getDocs(q);
-                        const equipamentos = [];
-                        querySnapshot.forEach(doc => equipamentos.push({id: doc.id, ...doc.data()}));
-                        const equipamentoCompleto = equipamentos.find(eq => eq.id === id);
-                        
-                        openEditModal(equipamentoCompleto);
+                        openEditModal(equipamentoClicado);
                         break;
                     case 'forward':
                     case 'back':
-                        const currentStatusIndex = STATUS_ORDER.indexOf(equipamentoParaAcao.status);
+                        const currentStatusIndex = STATUS_ORDER.indexOf(equipamentoClicado.status);
                         const newIndex = action === 'forward' ? currentStatusIndex + 1 : currentStatusIndex - 1;
                         
                         if (newIndex >= 0 && newIndex < STATUS_ORDER.length) {
